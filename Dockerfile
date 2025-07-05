@@ -38,8 +38,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN git clone https://github.com/facefusion/facefusion.git --branch ${FACEFUSION_VERSION} --single-branch .
 
 # Cài đặt các phụ thuộc cho FaceFusion
-RUN python3 -m pip install --upgrade pip && \
-    python3 -m pip install onnxruntime && \
+RUN python3 -m pip install onnxruntime && \
     python3 install.py --onnxruntime cuda --skip-conda
 
 # Cài đặt các phụ thuộc bổ sung cho RunPod

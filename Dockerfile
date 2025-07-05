@@ -48,9 +48,9 @@ RUN pip install runpod>=1.6.0 minio>=7.0.0 requests
 COPY download_face_swapper_models.py /facefusion/
 COPY download_minimal_models.py /facefusion/
 
-# Chỉ tải xuống các mô hình cần thiết cho face_swapper
-# Nếu script chính thất bại, sử dụng script backup
-RUN python3 download_face_swapper_models.py || python3 download_minimal_models.py
+# Tải xuống các mô hình cần thiết cho face_swapper
+# Thử script chính trước, nếu thất bại sử dụng force-download cơ bản
+RUN python3 download_face_swapper_models.py || python3 facefusion.py force-download
 
 # Sao chép script xử lý vào container
 COPY facefusion_handler.py /facefusion/

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Script tải xuống chọn lọc chỉ các model cần thiết cho face_swapper từ Hugging Face
-Thay vì tải tất cả model, chỉ tải những model cần thiết
+Script V3: Tải xuống chọn lọc các model cần thiết cho face_swapper từ Hugging Face
+Tập trung vào model inswapper_128_fp16 và các dependencies cốt lõi.
 """
 
 import os
@@ -18,6 +18,7 @@ def download_file_from_hf(repo_id, filename, local_dir):
 import os
 from huggingface_hub import hf_hub_download
 os.makedirs('{local_dir}', exist_ok=True)
+print(f'Đang tải {filename} từ {repo_id}...')
 hf_hub_download(
     repo_id='{repo_id}',
     filename='{filename}',
@@ -28,7 +29,7 @@ print(f'✓ Tải thành công {filename}')
             """
         ]
         
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
         
         if result.returncode == 0:
             return True
@@ -48,9 +49,7 @@ def install_huggingface_hub():
         return True
     except ImportError:
         print("Đang cài đặt huggingface_hub...")
-        result = subprocess.run([
-            'pip', 'install', 'huggingface_hub'
-        ], capture_output=True, text=True)
+        result = subprocess.run(['pip', 'install', 'huggingface_hub'], capture_output=True, text=True)
         
         if result.returncode == 0:
             print("✓ Cài đặt huggingface_hub thành công")
@@ -62,104 +61,63 @@ def install_huggingface_hub():
 def main():
     """Tải xuống các model cần thiết cho face_swapper"""
     
-    print("=== TẢI XUỐNG MODELS CHO FACE_SWAPPER ===")
+    print("=== TẢI XUỐNG MODELS CHO FACE_SWAPPER (V3) ===")
     
-    # Cài đặt huggingface_hub
     if not install_huggingface_hub():
         return False
     
-    # Cấu hình
     repo_id = "facefusion/models-3.0.0"
     models_dir = ".assets/models"
     
-    # Danh sách model cần thiết (tối ưu cho kích thước)
     essential_models = [
-        # Face swapper model nhẹ nhất
-        "ghost_1_256.onnx",          # 515 MB
-        "ghost_1_256.hash",
+        # Face swapper model chính (nhẹ, hiệu suất cao)
+        "inswapper_128_fp16.onnx",   # 278 MB
+        "inswapper_128_fp16.hash",
         
-        # Supporting models cần thiết
-        "arcface_w600k_r50.onnx",    # 174 MB - Face recognition
+        # Model nhận diện khuôn mặt (để lấy embedding)
+        "arcface_w600k_r50.onnx",    # 174 MB
         "arcface_w600k_r50.hash",
         
-        "bisenet_resnet_34.onnx",    # 93.6 MB - Face parsing
+        # Model phân tích và mask khuôn mặt
+        "bisenet_resnet_34.onnx",    # 93.6 MB
         "bisenet_resnet_34.hash",
         
-        "2dfan4.onnx",               # 97.9 MB - Face landmarks  
+        # Model tìm điểm mốc khuôn mặt
+        "2dfan4.onnx",               # 97.9 MB
         "2dfan4.hash",
         
-        "fan_68_5.onnx",             # 944 kB - Face landmarks helper
-        "fan_68_5.hash",
-        
-        "fairface.onnx",             # 85.2 MB - Face classification
+        # Model phân loại khuôn mặt
+        "fairface.onnx",             # 85.2 MB
         "fairface.hash",
-        
-        # Ghost converter
-        "arcface_converter_ghost.onnx",  # 21 MB
-        "arcface_converter_ghost.hash"
     ]
     
     print(f"Tổng số files cần tải: {len(essential_models)}")
-    print(f"Ước tính tổng kích thước: ~1GB (thay vì 10+ GB)")
-    print()
+    print(f"Ước tính tổng kích thước: ~730MB")
+    print("-" * 20)
     
     success_count = 0
     
     for model_file in essential_models:
-        print(f"Đang tải {model_file}...")
-        
         if download_file_from_hf(repo_id, model_file, models_dir):
             success_count += 1
         else:
-            print(f"✗ Thất bại: {model_file}")
+            print(f"✗ Thất bại khi tải: {model_file}")
+            # Có thể không cần thoát ngay lập tức để thử tải các file khác
     
-    print()
-    print(f"=== KẾT QUẢ: {success_count}/{len(essential_models)} files ===")
+    print("-" * 20)
+    print(f"=== KẾT QUẢ: {success_count}/{len(essential_models)} files đã được tải ===")
     
-    if success_count >= len(essential_models) * 0.8:  # 80% thành công
+    if success_count >= len(essential_models) * 0.9:  # 90% thành công
         print("✓ TẢI XUỐNG THÀNH CÔNG!")
-        
-        # Tạo symbolic links nếu cần
-        create_model_links()
-        
         return True
     else:
         print("✗ TẢI XUỐNG THẤT BẠI!")
         return False
 
-def create_model_links():
-    """Tạo symbolic links cho compatibility"""
-    models_dir = Path(".assets/models")
-    
-    # Map model names cho compatibility
-    model_mappings = {
-        "ghost_1_256.onnx": ["inswapper_128_fp16.onnx", "inswapper_128.onnx"],
-        "2dfan4.onnx": ["retinaface.onnx"],
-        "bisenet_resnet_34.onnx": ["bisenet.onnx"]
-    }
-    
-    for source, targets in model_mappings.items():
-        source_path = models_dir / source
-        if source_path.exists():
-            for target in targets:
-                target_path = models_dir / target
-                if not target_path.exists():
-                    try:
-                        target_path.symlink_to(source_path.name)
-                        print(f"✓ Tạo link: {target} -> {source}")
-                    except Exception as e:
-                        # Fallback: copy file
-                        try:
-                            import shutil
-                            shutil.copy2(source_path, target_path)
-                            print(f"✓ Copy: {target} <- {source}")
-                        except Exception as e2:
-                            print(f"✗ Lỗi tạo {target}: {e2}")
-
 if __name__ == "__main__":
     if main():
-        print("SUCCESS: Models face_swapper đã được tải xuống!")
+        print("SUCCESS: Các model face_swapper cần thiết đã được tải xuống!")
         sys.exit(0)
     else:
-        print("FAILED: Không thể tải xuống models!")
+        print("FAILED: Không thể tải xuống đầy đủ các model cần thiết!")
         sys.exit(1) 

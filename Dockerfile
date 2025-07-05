@@ -42,7 +42,7 @@ RUN python3 -m pip install onnxruntime && \
     python3 install.py --onnxruntime cuda --skip-conda
 
 # Cài đặt các phụ thuộc bổ sung cho RunPod
-RUN pip install runpod>=1.6.0 minio>=7.0.0 requests
+RUN pip install runpod>=1.6.0 minio>=7.0.0 requests huggingface_hub
 
 # Sao chép script tùy chỉnh để tải model face_swapper
 COPY download_face_swapper_models.py /facefusion/

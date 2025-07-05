@@ -45,9 +45,9 @@ RUN python3 -m pip install onnxruntime && \
 RUN pip install runpod>=1.6.0 minio>=7.0.0 requests
 
 # Tải xuống tất cả các mô hình cần thiết
-RUN python3 facefusion.py --command force-download
+RUN python3 facefusion.py force-download
 
-# Sao chép script xử lý
+# Sao chép script xử lý vào container
 COPY facefusion_handler.py /facefusion/
 
 # Kiểm tra sức khỏe

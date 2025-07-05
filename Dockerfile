@@ -18,9 +18,9 @@ WORKDIR /facefusion
 
 # Cài đặt các phụ thuộc hệ thống
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    python3.10 \
-    python3.10-dev \
-    python3.10-distutils \
+    python3 \
+    python3-dev \
+    python3-distutils \
     python3-pip \
     build-essential \
     git \

@@ -44,8 +44,13 @@ RUN python3 -m pip install onnxruntime && \
 # Cài đặt các phụ thuộc bổ sung cho RunPod
 RUN pip install runpod>=1.6.0 minio>=7.0.0 requests
 
-# Tải xuống tất cả các mô hình cần thiết
-RUN python3 facefusion.py force-download
+# Sao chép script tùy chỉnh để tải model face_swapper
+COPY download_face_swapper_models.py /facefusion/
+COPY download_minimal_models.py /facefusion/
+
+# Chỉ tải xuống các mô hình cần thiết cho face_swapper
+# Nếu script chính thất bại, sử dụng script backup
+RUN python3 download_face_swapper_models.py || python3 download_minimal_models.py
 
 # Sao chép script xử lý vào container
 COPY facefusion_handler.py /facefusion/

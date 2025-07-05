@@ -1,7 +1,8 @@
-# Base image với CUDA và cuDNN
-FROM nvidia/cuda:12.6.3-cudnn9-runtime-ubuntu22.04
+FROM nvidia/cuda:12.9.1-cudnn-runtime-ubuntu24.04
 
-# Set environment variables
+ARG FACEFUSION_VERSION=3.1.0
+ENV GRADIO_SERVER_NAME=0.0.0.0
+ENV PIP_BREAK_SYSTEM_PACKAGES=1
 ENV DEBIAN_FRONTEND=noninteractive
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONPATH="/facefusion"
@@ -32,29 +33,13 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Create symbolic link for python
-RUN ln -s /usr/bin/python3.10 /usr/bin/python
-
-# Install miniconda
-RUN wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh && \
-    bash miniconda.sh -b -p /opt/conda && \
-    rm miniconda.sh
-ENV PATH="/opt/conda/bin:$PATH"
+RUN ln -sf /usr/bin/python3.10 /usr/bin/python
 
 # Clone FaceFusion
-RUN git clone https://github.com/facefusion/facefusion.git --branch 3.1.0 --single-branch .
-
-# Create conda environment
-RUN conda create --prefix ./venv python=3.10 -y
-ENV PATH="/facefusion/venv/bin:$PATH"
-
-# Install CUDA dependencies
-RUN conda install -c conda-forge cuda-runtime=12.6.3 cudnn=9.3.0.75 -y
-
-# Install TensorRT
-RUN pip install tensorrt==10.6.0 --extra-index-url https://pypi.nvidia.com
+RUN git clone https://github.com/facefusion/facefusion.git --branch ${FACEFUSION_VERSION} --single-branch .
 
 # Install FaceFusion dependencies
-RUN python install.py --onnxruntime cuda
+RUN python install.py --onnxruntime cuda --skip-conda
 
 # Install additional dependencies for RunPod
 RUN pip install runpod>=1.6.0 minio>=7.0.0 requests

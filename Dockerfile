@@ -1,6 +1,8 @@
+# Sử dụng base image mới nhất với CUDA và cuDNN
 FROM nvidia/cuda:12.9.1-cudnn-runtime-ubuntu24.04
 
-ARG FACEFUSION_VERSION=3.1.0
+# Thiết lập biến môi trường cho FaceFusion
+ARG FACEFUSION_VERSION=3.3.0
 ENV GRADIO_SERVER_NAME=0.0.0.0
 ENV PIP_BREAK_SYSTEM_PACKAGES=1
 ENV DEBIAN_FRONTEND=noninteractive
@@ -11,10 +13,11 @@ ENV NVIDIA_VISIBLE_DEVICES=all
 ENV NVIDIA_DRIVER_CAPABILITIES=compute,utility
 ENV OMP_NUM_THREADS=1
 
+# Thiết lập thư mục làm việc
 WORKDIR /facefusion
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y \
+# Cài đặt các phụ thuộc hệ thống
+RUN apt-get update && apt-get install -y --no-install-recommends \
     python3.10 \
     python3.10-dev \
     python3.10-distutils \
@@ -32,27 +35,24 @@ RUN apt-get update && apt-get install -y \
     libgomp1 \
     && rm -rf /var/lib/apt/lists/*
 
-# Create symbolic link for python
-RUN ln -sf /usr/bin/python3.10 /usr/bin/python
-
-# Clone FaceFusion
+# Clone FaceFusion từ GitHub
 RUN git clone https://github.com/facefusion/facefusion.git --branch ${FACEFUSION_VERSION} --single-branch .
 
-# Install FaceFusion dependencies
-RUN python install.py --onnxruntime cuda --skip-conda
+# Cài đặt các phụ thuộc cho FaceFusion
+RUN python3 install.py --onnxruntime cuda --skip-conda
 
-# Install additional dependencies for RunPod
+# Cài đặt các phụ thuộc bổ sung cho RunPod
 RUN pip install runpod>=1.6.0 minio>=7.0.0 requests
 
-# Download all models
-RUN python facefusion.py --command force-download
+# Tải xuống tất cả các mô hình cần thiết
+RUN python3 facefusion.py --command force-download
 
-# Copy handler script
+# Sao chép script xử lý
 COPY facefusion_handler.py /facefusion/
 
-# Health check
+# Kiểm tra sức khỏe
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD python -c "import torch; assert torch.cuda.is_available()" || exit 1
+    CMD python3 -c "import torch; assert torch.cuda.is_available()" || exit 1
 
-# Start handler
-CMD ["python", "facefusion_handler.py"]
+# Khởi động handler
+CMD ["python3", "facefusion_handler.py"]
